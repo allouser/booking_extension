@@ -175,9 +175,8 @@
       RowActions.CopyButton?.injectRowCopyButtons();
     }
 
-    MapsPoi?.injectPoiPageHook();
+    MapsPoi?.startPoiHookInjectionLoop ? MapsPoi.startPoiHookInjectionLoop() : MapsPoi?.injectPoiPageHook();
     setInterval(() => {
-      MapsPoi?.processMapInfoWindows();
       BulkQueue.Cancel?.keepStopButtonAlive();
     }, 450);
   }

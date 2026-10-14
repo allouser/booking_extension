@@ -75,3 +75,4 @@ Modules attach to the shared global `window.Allo` namespace:
 1. **Keep files small**: Do not aggregate multiple features into a single file. Keep UI components separate from extraction logic.
 2. **Prevent Event Bubbling**: In-row buttons and checkboxes must always call `e.stopPropagation()` and `e.preventDefault()` to prevent triggering the host website's row click handlers.
 3. **No Build Step Required**: Scripts are loaded sequentially by Chrome via `manifest.json`. Any changes take effect immediately upon reloading in `chrome://extensions`.
+
