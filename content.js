@@ -1361,10 +1361,13 @@
     if (!isExtensionActive || !isBookingPage()) floatingPanel.style.display = "none";
 
     floatingPanel.innerHTML = `
-      <span style="font-size: 13px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-        Excel Copy
-      </span>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px;">
+        <span style="font-size: 13px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          Excel Copy
+        </span>
+        <button style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;" id="allo-close-panel" title="Turn OFF">✕</button>
+      </div>
       <button class="allo-btn" id="allo-snip-btn" title="Shortcut: Alt+S">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
         Select Area (Alt+S)
@@ -1374,7 +1377,6 @@
       <button class="allo-btn success" id="allo-copy-selected-btn" style="display:none;">
         Copy Selected (<span id="allo-selected-count">0</span>)
       </button>
-      <button style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 4px;" id="allo-close-panel" title="Turn OFF">✕</button>
     `;
 
     document.body.appendChild(floatingPanel);
@@ -2366,7 +2368,10 @@
     allCbs.forEach(cb => {
       if (!cb.dataset.alloBound) {
         cb.dataset.alloBound = "true";
-        cb.addEventListener("change", () => {
+        cb.addEventListener("click", (e) => { e.stopPropagation(); });
+        cb.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+        cb.addEventListener("change", (e) => {
+          e.stopPropagation();
           const row = cb.closest("tr") || cb.closest('[role="row"]');
           if (row && !row.closest("thead")) {
             if (cb.checked) row.classList.add("allo-row-selected");
@@ -2381,13 +2386,28 @@
       let ex = r.querySelector(".allo-row-checkbox-wrap");
       if (ex) { ex.style.display = checkboxesActive ? "inline-flex" : "none"; }
       else if (checkboxesActive && !r.querySelector('input[type="checkbox"]')) {
-        const w = document.createElement("span"); w.className = "allo-row-checkbox-wrap";
-        const cb = document.createElement("input"); cb.type = "checkbox"; cb.className = "allo-row-checkbox";
-        cb.addEventListener("change", () => {
+        const w = document.createElement("span"); 
+        w.className = "allo-row-checkbox-wrap";
+        w.addEventListener("click", (e) => { e.stopPropagation(); });
+        w.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+        const cb = document.createElement("input"); 
+        cb.type = "checkbox"; 
+        cb.className = "allo-row-checkbox";
+        cb.dataset.alloBound = "true";
+        cb.addEventListener("click", (e) => { e.stopPropagation(); });
+        cb.addEventListener("mousedown", (e) => { e.stopPropagation(); });
+        cb.addEventListener("change", (e) => {
+          e.stopPropagation();
           if (cb.checked) r.classList.add("allo-row-selected"); else r.classList.remove("allo-row-selected");
           updateBadgeCount();
         });
-        w.appendChild(cb); r.children.length > 0 ? r.insertBefore(w, r.firstChild) : r.appendChild(w);
+        w.appendChild(cb); 
+        const firstCell = r.querySelector("td, [role='cell']");
+        if (firstCell) {
+          firstCell.insertBefore(w, firstCell.firstChild);
+        } else {
+          r.children.length > 0 ? r.insertBefore(w, r.firstChild) : r.appendChild(w);
+        }
       }
     });
     const btn = document.getElementById("allo-copy-selected-btn");
@@ -2546,7 +2566,7 @@
     // Ignore mutations triggered solely by our own elements
     const isOnlyOurChange = mutations.every(m => {
       return Array.from(m.addedNodes).concat(Array.from(m.removedNodes)).every(n => {
-        return n.nodeType === 1 && (n.classList.contains("allo-row-copy-btn") || n.id === "allo-floating-panel" || n.id === "allo-stop-bulk-btn" || n.classList.contains("allo-snip-box") || n.classList.contains("allo-toast"));
+        return n.nodeType === 1 && (n.classList.contains("allo-row-copy-btn") || n.classList.contains("allo-row-checkbox-wrap") || n.classList.contains("allo-row-checkbox") || n.id === "allo-floating-panel" || n.id === "allo-stop-bulk-btn" || n.classList.contains("allo-snip-box") || n.classList.contains("allo-toast"));
       });
     });
     if (isOnlyOurChange) return;
