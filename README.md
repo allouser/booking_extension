@@ -30,15 +30,20 @@ Built for high-volume back-office workflows where bulk exports must stay in list
 
 ```
 booking_extension/
-├── manifest.json      — MV3 manifest (permissions, content scripts, commands)
-├── content.js         — Bookings table parsing, detail extraction, bulk queue, clipboard
+├── manifest.json      — MV3 manifest (permissions, modular content scripts, commands)
 ├── background.js      — Command relay (Alt+S / Alt+A) and message handling
 ├── popup.html         — Extension popup shell
 ├── popup.js           — Power toggle, field-pill configuration, action triggers
 ├── content.css        — Injected row buttons, panels, toasts, snip overlay
 ├── poi-page-hook.js   — MAIN-world Google Maps hook for place-name copy
 ├── icons/             — Extension icons (16 / 48 / 128)
-├── test-demo.html     — Local DOM fixture for development testing
+├── src/               — Feature-based modular architecture
+│   ├── config/        — Configuration constants and runtime state
+│   ├── utils/         — DOM, formatting, and clipboard helpers
+│   ├── core/          — Page detection, table parsing, and mutation observation
+│   ├── features/      — Floating panel, row actions, snip tool, detail extractor, bulk queue, maps POI
+│   └── main.js        — Content script entry point and orchestrator
+├── ARCHITECTURE.md    — Developer & AI agent architecture reference guide
 └── README.md          — Project documentation
 ```
 
