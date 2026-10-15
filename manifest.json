@@ -19,28 +19,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": [
-        "src/config/constants.js",
-        "src/config/state.js",
-        "src/utils/formatters.js",
-        "src/utils/dom.js",
-        "src/utils/clipboard.js",
-        "src/core/page-detector.js",
-        "src/core/table-parser.js",
-        "src/core/observer.js",
-        "src/features/bulk-queue/cancel.js",
-        "src/features/bulk-queue/pagination.js",
-        "src/features/detail-extractor/live-extract.js",
-        "src/features/detail-extractor/bg-fetch.js",
-        "src/features/detail-extractor/detail-banner.js",
-        "src/features/floating-panel/panel.js",
-        "src/features/row-actions/copy-button.js",
-        "src/features/row-actions/checkboxes.js",
-        "src/features/snip-tool/snip.js",
-        "src/features/maps-poi/poi-detector.js",
-        "src/features/bulk-queue/queue.js",
-        "src/main.js"
-      ],
+      "js": ["content.js"],
       "css": ["content.css"],
       "all_frames": true,
       "run_at": "document_end"
