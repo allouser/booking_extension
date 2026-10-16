@@ -14,13 +14,20 @@ const DEFAULT_FIELDS = {
   user: true,
   vehicle: true,
   status: true,
-  note: true
+  note: true,
+  userMobile: true,
+  driverMobile: true
+};
+
+const DEFAULT_COPY_SETTINGS = {
+  removeExtraSpaces: false
 };
 
 let currentFields = { ...DEFAULT_FIELDS };
+let currentCopySettings = { ...DEFAULT_COPY_SETTINGS };
 
 // Load current enabled/disabled state from chrome.storage
-chrome.storage.local.get({ extensionEnabled: true, enabledFields: DEFAULT_FIELDS }, (data) => {
+chrome.storage.local.get({ extensionEnabled: true, enabledFields: DEFAULT_FIELDS, copySettings: DEFAULT_COPY_SETTINGS }, (data) => {
   const isEnabled = data.extensionEnabled;
   powerToggle.checked = isEnabled;
   updateUIState(isEnabled);
@@ -29,6 +36,11 @@ chrome.storage.local.get({ extensionEnabled: true, enabledFields: DEFAULT_FIELDS
     currentFields = { ...DEFAULT_FIELDS, ...data.enabledFields };
   }
   renderFieldPills();
+
+  if (data.copySettings) {
+    currentCopySettings = { ...DEFAULT_COPY_SETTINGS, ...data.copySettings };
+    document.getElementById("cb-remove-extra-spaces").checked = currentCopySettings.removeExtraSpaces;
+  }
 });
 
 // Handle toggle click
@@ -136,3 +148,17 @@ document.getElementById("btn-stop").addEventListener("click", async () => {
     window.close();
   }
 });
+
+// Remove Extra Spaces toggle
+document.getElementById("cb-remove-extra-spaces").addEventListener("change", async () => {
+  currentCopySettings.removeExtraSpaces = document.getElementById("cb-remove-extra-spaces").checked;
+  chrome.storage.local.set({ copySettings: currentCopySettings });
+  await notifyContentScriptCopySettings();
+});
+
+async function notifyContentScriptCopySettings() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab && tab.id) {
+    chrome.tabs.sendMessage(tab.id, { action: "SET_COPY_SETTINGS", copySettings: currentCopySettings }).catch(() => {});
+  }
+}

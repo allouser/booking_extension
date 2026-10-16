@@ -50,14 +50,21 @@
     user: true,
     vehicle: true,
     status: true,
-    note: true
+    note: true,
+    userMobile: true,
+    driverMobile: true
+  };
+
+  let copySettings = {
+    removeExtraSpaces: false
   };
 
   // Retrieve initial enabled status & enabledFields
   if (typeof chrome !== "undefined" && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get({ extensionEnabled: true, enabledFields: enabledFields }, (data) => {
+    chrome.storage.local.get({ extensionEnabled: true, enabledFields: enabledFields, copySettings: copySettings }, (data) => {
       isExtensionActive = data.extensionEnabled;
       if (data.enabledFields) enabledFields = data.enabledFields;
+      if (data.copySettings) copySettings = data.copySettings;
       syncVisibility();
       if (isBookingPage()) {
         initFloatingControl();
@@ -72,6 +79,9 @@
       if (changes.enabledFields && changes.enabledFields.newValue) {
         enabledFields = changes.enabledFields.newValue;
       }
+      if (changes.copySettings && changes.copySettings.newValue) {
+        copySettings = changes.copySettings.newValue;
+      }
       if (changes.extensionEnabled !== undefined) {
         isExtensionActive = changes.extensionEnabled.newValue;
         syncVisibility();
@@ -84,6 +94,15 @@
           handleBulkStopped(true);
         }
       } catch (e) {}
+    });
+  }
+
+  // Listen for runtime messages (copy settings from popup)
+  if (typeof chrome !== "undefined" && chrome.runtime && chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((request) => {
+      if (request.action === "SET_COPY_SETTINGS" && request.copySettings) {
+        copySettings = request.copySettings;
+      }
     });
   }
 
@@ -1000,6 +1019,8 @@
       pending.user = cleanName(details.userName);
       pending.driver = cleanName(details.driverName);
       pending.vehicle = cleanVehicle(details.vehicleType || pending.vehicle);
+      pending.userMobile = details.userMobile || "No Details";
+      pending.driverMobile = details.driverMobile || "No Details";
 
       const rowTsv = buildRowTsv({
         date: pending.date || todayStr(),
@@ -1011,7 +1032,9 @@
         user: pending.user,
         vehicle: pending.vehicle,
         status: pending.status || "",
-        note: pending.note || ""
+        note: pending.note || "",
+        userMobile: pending.userMobile,
+        driverMobile: pending.driverMobile
       });
 
       copyToClipboard(rowTsv);
@@ -1078,6 +1101,8 @@
       currentItem.user = cleanName(details.userName);
       currentItem.driver = cleanName(details.driverName);
       currentItem.vehicle = cleanVehicle(details.vehicleType || currentItem.vehicle);
+      currentItem.userMobile = details.userMobile || "No Details";
+      currentItem.driverMobile = details.driverMobile || "No Details";
 
       const nextIndex = currentIndex + 1;
       queueState.currentIndex = nextIndex;
@@ -1285,7 +1310,9 @@
         user: user,
         vehicle: details.vehicleType || "Auto",
         status: trip.status || "completed",
-        note: ""
+        note: "",
+        userMobile: details.userMobile || "No Details",
+        driverMobile: details.driverMobile || "No Details"
       });
 
       copyToClipboard(rowTsv);
@@ -1558,10 +1585,26 @@
       if (st) vehicleType = st;
     }
 
+    // Extract user number from User Details section (first phone number)
+    const userSectionForMobile = extractSection(bodyText, "User Details") || extractSection(bodyText, "Customer Details");
+    let userNumber = "";
+    if (userSectionForMobile) {
+      userNumber = extractFieldValue(userSectionForMobile, "Mobile") || extractFieldValue(userSectionForMobile, "Phone") || "";
+    }
+
+    // Extract provider number from Provider Details section (second phone number)
+    const providerSectionForMobile = extractSection(bodyText, "Provider Details") || extractSection(bodyText, "Driver Details");
+    let providerNumber = "";
+    if (providerSectionForMobile) {
+      providerNumber = extractFieldValue(providerSectionForMobile, "Mobile") || extractFieldValue(providerSectionForMobile, "Phone") || "";
+    }
+
     return {
       userName: cleanName(userName),
       driverName: cleanName(driverName),
-      vehicleType: cleanVehicle(vehicleType)
+      vehicleType: cleanVehicle(vehicleType),
+      userMobile: userNumber || "No Details",
+      driverMobile: providerNumber || "No Details"
     };
   }
 
@@ -1822,11 +1865,27 @@
         if (m) fetchedCrn = m[0];
       }
 
+      // Extract user number from User Details section (first phone number)
+      const userSectionForMobile = extractSection(bodyText, "User Details");
+      let userNumber = "";
+      if (userSectionForMobile) {
+        userNumber = extractFieldValue(userSectionForMobile, "Mobile") || extractFieldValue(userSectionForMobile, "Phone") || "";
+      }
+
+      // Extract provider number from Provider Details section (second phone number)
+      let providerNumber = "";
+      const providerSectionForMobile = extractSection(bodyText, "Provider Details") || extractSection(bodyText, "Driver Details");
+      if (providerSectionForMobile) {
+        providerNumber = extractFieldValue(providerSectionForMobile, "Mobile") || extractFieldValue(providerSectionForMobile, "Phone") || "";
+      }
+
       return {
         userName: cleanName(userName),
         driverName: cleanName(driverName),
         vehicleType: cleanVehicle(vehicleType),
-        crn: digitsOnly(fetchedCrn || "")
+        crn: digitsOnly(fetchedCrn || ""),
+        userMobile: userNumber || "No Details",
+        driverMobile: providerNumber || "No Details"
       };
     } catch (err) {
       console.error("[Allo Exporter] Error fetching details:", err);
@@ -2160,6 +2219,7 @@
       from: fromVal, to: toVal,
       driver: "No Details", user: "No Details",
       vehicle: "-", status: statusVal, note: "",
+      userMobile: "No Details", driverMobile: "No Details",
       detailUrl: detailUrl
     };
   }
@@ -2223,6 +2283,8 @@
             parsedData[i].user = cleanName(details.userName);
             parsedData[i].driver = cleanName(details.driverName);
             parsedData[i].vehicle = details.vehicleType || "Auto";
+            parsedData[i].userMobile = details.userMobile || "No Details";
+            parsedData[i].driverMobile = details.driverMobile || "No Details";
           }
         } catch (err) {
           console.error("[Allo Exporter] Detail error:", err);
@@ -2259,7 +2321,9 @@
           user: item.user,
           vehicle: item.vehicle,
           status: item.status,
-          note: item.note
+          note: item.note,
+          userMobile: item.userMobile || "No Details",
+          driverMobile: item.driverMobile || "No Details"
         }))
       };
 
@@ -2313,11 +2377,18 @@
    * Unchecked fields become "" (blank) so Excel columns stay aligned.
    */
   function buildRowTsv(data) {
-    const fieldOrder = ["date", "time", "crn", "from", "to", "driver", "user", "vehicle", "status", "note"];
-    return fieldOrder.map(key => {
-      if (enabledFields[key] === false) return "";
-      return sanitize(data[key] || "");
-    }).join("\t");
+    const fieldOrder = ["date", "time", "crn", "from", "to", "driver", "user", "vehicle", "status", "note", "userMobile", "driverMobile"];
+    return fieldOrder
+      .filter(key => enabledFields[key] !== false)
+      .map(key => {
+        let val = sanitize(data[key] || "");
+        // Apply space handling only to copied output, never to original content
+        if (copySettings.removeExtraSpaces && val) {
+          val = val.replace(/\s+/g, " ").trim();
+        }
+        return val;
+      })
+      .join("\t");
   }
 
   function copyToClipboard(text) {
