@@ -10,7 +10,7 @@
 
 (function () {
   // Terminal-safe guard: content.js is a BROWSER content script.
-  // `node content.js` has no window/document — exit quietly instead of
+  // `node content.js` has no window/document \u2014 exit quietly instead of
   // throwing "ReferenceError: window is not defined".
   // (Use `node --check content.js` for syntax validation.)
   if (typeof window === "undefined" || typeof document === "undefined") {
@@ -116,7 +116,7 @@
     const path = window.location.pathname.toLowerCase();
 
     // 1. Explicit NON-booking paths FIRST (Providers, Users, Dashboard, etc.)
-    //    Must win over any fallback text match — e.g. /provider/view/4 also
+    //    Must win over any fallback text match \u2014 e.g. /provider/view/4 also
     //    contains tabs like "Ride History" that could confuse heuristics.
     if (
       path.includes("/provider") ||
@@ -182,7 +182,7 @@
       if ((navText.includes("booking") || navText.includes("ride later")) && hasBookingTableFingerprint()) return true;
     }
 
-    // 5. Check main page headings — same fingerprint guard
+    // 5. Check main page headings \u2014 same fingerprint guard
     const headings = Array.from(document.querySelectorAll("h1, h2, h3, h4, .page-title, .title"));
     for (const h of headings) {
       const txt = (h.innerText || "").toLowerCase();
@@ -216,7 +216,7 @@
       }
       if (!isExtensionActive) { sendResponse({ status: "extension_disabled" }); return true; }
       if (!isBookingPage()) {
-        showToast("⚠️ Booking Pages Only", "This extension feature is only available on Bookings pages.");
+        showToast("\u26a0\ufe0f Booking Pages Only", "This extension feature is only available on Bookings pages.");
         sendResponse({ status: "not_booking_page" });
         return true;
       }
@@ -290,7 +290,7 @@
         syncVisibility();
       }
     } else {
-      // Same-URL DOM swaps (Angular tab switch Provider ↔ Ride History):
+      // Same-URL DOM swaps (Angular tab switch Provider \u2194 Ride History):
       // keep non-booking tabs clean without full reload.
       if (!isBookingPage()) syncVisibility();
     }
@@ -338,11 +338,11 @@
       if (!looksLikeMap) return;
     }
 
-    // Strategy 1: ONLY real Google Maps link anchors — never generic
+    // Strategy 1: ONLY real Google Maps link anchors \u2014 never generic
     // a[target="_blank"] (that was hijacking normal clicks / cards).
     // EXCLUDE map footer chrome: "Open this area in Google Maps" link,
     // Terms / Map Data / keyboard-shortcut controls live in
-    // .gmnoprint / .gm-style-cc / .gmnoscreen — those are NOT popups.
+    // .gmnoprint / .gm-style-cc / .gmnoscreen \u2014 those are NOT popups.
     const mapLinks = Array.from(document.querySelectorAll('a[href*="maps.google"], a[href*="google.com/maps"]'))
       .filter(function (a) {
         try {
@@ -353,7 +353,7 @@
         return true;
       });
 
-    // Strategy 2: Maps popup containers — search WHOLE document (not just
+    // Strategy 2: Maps popup containers \u2014 search WHOLE document (not just
     // .gm-style prefix; new vector bubbles sometimes sit outside it).
     // Covers old .gm-style-iw-c AND new POI bubble like
     // "Pattanichchippuliyankulam, Vavuniya, Sri Lanka".
@@ -373,8 +373,8 @@
     });
 
     // Combine candidate popup card elements
-    // Plus: fallback — any small white bubble card containing the open-in-new
-    // icon (your screenshot: title + address + ↗ blue icon on the right).
+    // Plus: fallback \u2014 any small white bubble card containing the open-in-new
+    // icon (your screenshot: title + address + \u2197 blue icon on the right).
     const cards = [];
 
     mapLinks.forEach(link => {
@@ -405,7 +405,7 @@
         var hasIcon = !!(d.querySelector('button, a[href*="maps"], a[href*="google.com/maps"], [aria-label*="map" i]'));
         if (!hasIcon) continue;
         if (!/sri lanka|vavuniya|\+[A-Z0-9]{2,}/i.test(dt)) continue;
-        // Skip huge layout containers — want the small bubble only
+        // Skip huge layout containers \u2014 want the small bubble only
         try {
           var r = d.getBoundingClientRect();
           if (r.width > 420 || r.height > 220 || r.width < 60) continue;
@@ -432,11 +432,11 @@
       const textLines = (card.innerText || "")
         .split("\n")
         .map(s => s.trim())
-        .filter(s => s.length > 0 && !/^(map|satellite|zoom|close|terms|google|keyboard shortcuts|map data|terms of use|report a map error|\+|\-)$/i.test(s) && !/map data ©/i.test(s) && !/^terms$/i.test(s));
+        .filter(s => s.length > 0 && !/^(map|satellite|zoom|close|terms|google|keyboard shortcuts|map data|terms of use|report a map error|\+|\-)$/i.test(s) && !/map data \u00a9/i.test(s) && !/^terms$/i.test(s));
 
       if (textLines.length === 0 && !titleEl) return;
 
-      // Fallback for new vector bubble: no h1-h4 — first short line is title.
+      // Fallback for new vector bubble: no h1-h4 \u2014 first short line is title.
       // Prefer a real element matching that text so button can sit inline.
       if (!titleEl && textLines.length) {
         try {
@@ -461,7 +461,7 @@
 
       if (!cleanName || cleanName.length < 2) return;
 
-      // Skip OUR OWN bubble (page-hook InfoWindow content) — it already
+      // Skip OUR OWN bubble (page-hook InfoWindow content) \u2014 it already
       // has its Copy button. Processing it again creates the double
       // "Copy / Copy place name" row from your screenshot.
       try {
@@ -469,11 +469,11 @@
         if (card.hasAttribute && (card.hasAttribute("data-allo-bubble") || card.hasAttribute("data-allo-copy"))) return;
       } catch (e) {}
 
-      // REJECT map footer / chrome text — never a place name.
-      // Your bug: "Map data ©2026" link text became the "place" and a
-      // "📍 Place | Map data ©2026 | Copy" chip appeared on every reload.
-      if (/map data ©|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(cleanName)) return;
-      if (/map data ©|open this area|keyboard shortcuts|report a map error/i.test((card.innerText || ""))) {
+      // REJECT map footer / chrome text \u2014 never a place name.
+      // Your bug: "Map data \u00a92026" link text became the "place" and a
+      // "\ud83d\udccd Place | Map data \u00a92026 | Copy" chip appeared on every reload.
+      if (/map data \u00a9|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(cleanName)) return;
+      if (/map data \u00a9|open this area|keyboard shortcuts|report a map error/i.test((card.innerText || ""))) {
         var looksLikeRealBubble = false;
         try {
           looksLikeRealBubble = !!(
@@ -498,18 +498,18 @@
       copyBtn.type = "button";
       copyBtn.dataset.placename = cleanName;
       copyBtn.title = 'Copy "' + cleanName + '"';
-      copyBtn.textContent = "⧉ Copy";
+      copyBtn.textContent = "\u29c9 Copy";
       copyBtn.style.cssText = "display:inline-flex !important;align-items:center;justify-content:center;height:24px;padding:0 8px;margin-left:6px;background:#0284c7;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;vertical-align:middle;position:relative;z-index:2147483647;white-space:nowrap;";
       copyBtn.onmousedown = function (e) { e.stopPropagation(); };
       copyBtn.onmouseover = function () { copyBtn.style.background = "#0369a1"; };
-      copyBtn.onmouseout = function () { if (copyBtn.textContent !== "✓ Copied") copyBtn.style.background = "#0284c7"; };
+      copyBtn.onmouseout = function () { if (copyBtn.textContent !== "\u2713 Copied") copyBtn.style.background = "#0284c7"; };
       copyBtn.onclick = function (e) {
         e.preventDefault();
         e.stopPropagation();
         var nm = copyBtn.dataset.placename || cleanName;
         copyToClipboard(nm);
         showToast("Copied Place Name!", nm);
-        copyBtn.textContent = "✓ Copied";
+        copyBtn.textContent = "\u2713 Copied";
         copyBtn.style.background = "#10b981";
       };
 
@@ -559,7 +559,7 @@
     return;
     if (!placeName || placeName.length < 2) return;
     // REJECT footer chrome even if a caller forgot to filter.
-    if (/map data ©|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(placeName)) return;
+    if (/map data \u00a9|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(placeName)) return;
     // Never on the list page
     try {
       var hrefNow = window.top.location.href;
@@ -574,11 +574,11 @@
       chip = document.createElement("div");
       chip.id = "allo-poi-float-chip";
       chip.style.cssText = "position:fixed;bottom:88px;right:24px;z-index:2147483647;background:#0f172a;color:#fff;border:1px solid #334155;border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 15px 30px rgba(0,0,0,.45);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;max-width:340px;";
-      chip.innerHTML = '<span style="color:#38bdf8;font-weight:700;white-space:nowrap;">📍 Place</span><span id="allo-poi-float-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;color:#e2e8f0;"></span>';
+      chip.innerHTML = '<span style="color:#38bdf8;font-weight:700;white-space:nowrap;">\ud83d\udccd Place</span><span id="allo-poi-float-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px;color:#e2e8f0;"></span>';
       var cb = document.createElement("button");
       cb.id = "allo-poi-float-copy";
       cb.type = "button";
-      cb.textContent = "⧉ Copy";
+      cb.textContent = "\u29c9 Copy";
       cb.style.cssText = "background:#0284c7;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;";
       cb.onmouseover = function () { cb.style.background = "#0369a1"; };
       cb.onmouseout = function () { cb.style.background = "#0284c7"; };
@@ -587,12 +587,12 @@
         var nm = (document.getElementById("allo-poi-float-name") || {}).textContent || placeName;
         copyToClipboard(nm);
         showToast("Copied Place Name!", nm);
-        cb.textContent = "✓ Copied";
-        setTimeout(function () { cb.textContent = "⧉ Copy"; }, 1500);
+        cb.textContent = "\u2713 Copied";
+        setTimeout(function () { cb.textContent = "\u29c9 Copy"; }, 1500);
       };
       chip.appendChild(cb);
       var x = document.createElement("button");
-      x.type = "button"; x.textContent = "✕"; x.title = "Hide";
+      x.type = "button"; x.textContent = "\u2715"; x.title = "Hide";
       x.style.cssText = "background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:0 2px;";
       x.onclick = function (ev) { ev.stopPropagation(); hidePoiFloatChip(); };
       chip.appendChild(x);
@@ -619,7 +619,7 @@
   // a native popup at all (IconMouseEvent with placeId, default suppressed).
   // Hook the map click ourselves and show OUR OWN copyable bubble.
   // (Your Trip Route map is exactly this: <google-map mapid="AIza...">)
-  // NOTE: content scripts run in an ISOLATED world — wrapping
+  // NOTE: content scripts run in an ISOLATED world \u2014 wrapping
   // google.maps.Map here cannot see the page's own Maps objects, so the
   // real hook lives in poi-page-hook.js injected below into MAIN world.
   var _poiHookInstalled = false;
@@ -634,7 +634,7 @@
         if (!d || (d.type !== "ALLO_POI_COPIED" && d.type !== "ALLO_POI_OPENED")) return;
         if (!isExtensionActive) return;
         var nm = d.name || "";
-        if (/map data ©|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(nm)) return;
+        if (/map data \u00a9|open this area|keyboard shortcuts|report a map error|terms of use|^terms$/i.test(nm)) return;
         if (d.type === "ALLO_POI_COPIED") {
           if (nm) {
             try { copyToClipboard(nm); } catch (e) {}
@@ -642,8 +642,8 @@
           }
         } else if (d.type === "ALLO_POI_OPENED") {
           // Floating chip removed: the name auto-copies on bubble open
-          // (ALLO_POI_COPIED above) so a second "📍 Place" chip is redundant.
-          // Do nothing here — one popup (the Copied toast) is enough.
+          // (ALLO_POI_COPIED above) so a second "\ud83d\udccd Place" chip is redundant.
+          // Do nothing here \u2014 one popup (the Copied toast) is enough.
         }
       } catch (e) {}
     });
@@ -683,7 +683,7 @@
     var placeId = event.placeId;
     var bubble = document.createElement("div");
     bubble.style.cssText = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-width:180px;max-width:280px;padding:2px;";
-    bubble.innerHTML = '<div style="font-weight:700;font-size:14px;color:#0f172a;">Loading place…</div>';
+    bubble.innerHTML = '<div style="font-weight:700;font-size:14px;color:#0f172a;">Loading place\u2026</div>';
     try {
       infoWin.setOptions({ position: latLng, pixelOffset: new google.maps.Size(0, -30), headerDisabled: false });
       infoWin.setContent(bubble);
@@ -697,7 +697,7 @@
       bubble.innerHTML =
         '<div style="font-weight:700;font-size:14px;color:#0f172a;margin-bottom:2px;">' + safeName + '</div>' +
         (safeAddr ? '<div style="font-size:12px;color:#64748b;margin-bottom:8px;">' + safeAddr + '</div>' : '') +
-        '<button type="button" data-allo-copy style="display:inline-flex;align-items:center;gap:6px;background:#0284c7;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">⧉ Copy place name</button>';
+        '<button type="button" data-allo-copy style="display:inline-flex;align-items:center;gap:6px;background:#0284c7;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">\u29c9 Copy place name</button>';
       try { showPoiFloatChip(name); } catch (e) {}
       var btn = bubble.querySelector("[data-allo-copy]");
       if (btn) {
@@ -706,7 +706,7 @@
           e.preventDefault(); e.stopPropagation();
           copyToClipboard(name);
           showToast("Copied Place Name!", name);
-          btn.textContent = "✓ Copied";
+          btn.textContent = "\u2713 Copied";
         });
       }
     });
@@ -751,7 +751,7 @@
   setInterval(processMapInfoWindows, 200);
 
   // ============================================================
-  //  PAGINATION-STATE HELPERS (site has no state mgmt — back-nav resets to page 1)
+  //  PAGINATION-STATE HELPERS (site has no state mgmt \u2014 back-nav resets to page 1)
   //  We snapshot the active page before leaving, then click it back after return.
   // ============================================================
   function getActivePageNumber() {
@@ -804,7 +804,7 @@
         "ul.pagination li a, ul.pagination li button, .pagination a, .pagination button, " +
         ".page-item a, .page-item button, [class*='pagination'] a, [class*='pagination'] button"
       ));
-      // exact-number match first (skip « » ... 173)
+      // exact-number match first (skip \u00ab \u00bb ... 173)
       for (const el of els) {
         if ((el.innerText || el.textContent || "").trim() === String(pageNum)) return el;
       }
@@ -852,7 +852,7 @@
   }
 
   function navigateBackToList(returnUrl, savedPage, fallbackPath) {
-    // Never navigate away after user pressed Stop — navigation is what makes
+    // Never navigate away after user pressed Stop \u2014 navigation is what makes
     // "Stop not working when screen quickly changes" happen.
     if (isBulkCancelRequested()) { handleBulkStopped(false); return; }
     const target = Math.max(1, parseInt(savedPage, 10) || 1);
@@ -893,7 +893,7 @@
 
   function checkDetailPageAutoCopy() {
     try {
-      // User pressed Stop while a detail page was loading — abort before anything else
+      // User pressed Stop while a detail page was loading \u2014 abort before anything else
       if (isBulkCancelRequested()) { handleBulkStopped(true); return; }
       const bulkQueueRaw = sessionStorage.getItem("ALLO_BULK_QUEUE");
       const pendingRaw = sessionStorage.getItem("ALLO_PENDING_COPY");
@@ -941,7 +941,7 @@
     }
 
     const currentItem = items[currentIndex];
-    showProgressToast(`⚡ Processing ${currentIndex + 1}/${items.length}...`, `Opening row CRN: ${currentItem.crn || ""} · <b>⛔ Press Esc to Stop</b>`);
+    showProgressToast(`\u26a1 Processing ${currentIndex + 1}/${items.length}...`, `Opening row CRN: ${currentItem.crn || ""} \u00b7 <b>\u26d4 Press Esc to Stop</b>`);
 
     // Wait for list DOM to settle (and saved pagination to restore) then click target row
     let attempts = 0;
@@ -980,7 +980,7 @@
           const allTds = Array.from(targetRow.querySelectorAll("td"));
           const clickTarget = allTds.length > 1 ? allTds[1] : allTds[0] || targetRow;
           try {
-            // Re-check cancel right before the click — rapid Stop presses land here
+            // Re-check cancel right before the click \u2014 rapid Stop presses land here
             if (isBulkCancelRequested()) { handleBulkStopped(true); return; }
             clickTarget.click();
           } catch (e) {}
@@ -1005,7 +1005,7 @@
     if (!isDetailPage) return;
 
     console.log("[Allo Exporter] Single detail page detected! Starting extraction...");
-    showProgressToast("📋 Extracting details...", "Waiting for page to render...");
+    showProgressToast("\ud83d\udccb Extracting details...", "Waiting for page to render...");
 
     let extractionDone = false;
 
@@ -1045,7 +1045,7 @@
       }));
 
       console.log("[Allo Exporter] Extracted! User:", pending.user, "Driver:", pending.driver);
-      showToast(`✅ Copied!`, `User: ${pending.user} | Driver: ${pending.driver}`);
+      showToast(`\u2705 Copied!`, `User: ${pending.user} | Driver: ${pending.driver}`);
 
       setTimeout(() => {
         if (isBulkCancelRequested()) { handleBulkStopped(false); return; }
@@ -1077,7 +1077,7 @@
     }
 
     const currentItem = items[currentIndex];
-    showProgressToast(`⚡ Extracting row ${currentIndex + 1}/${total}...`, `CRN: ${currentItem.crn || ""}`);
+    showProgressToast(`\u26a1 Extracting row ${currentIndex + 1}/${total}...`, `CRN: ${currentItem.crn || ""}`);
 
     let extractionDone = false;
 
@@ -1090,7 +1090,7 @@
         var liveCrn = digitsOnly((liveTrip && liveTrip.crn) || "");
         var wantCrn = digitsOnly(currentItem.crn || "");
         if (wantCrn && liveCrn && liveCrn !== wantCrn) {
-          showProgressToast(`⚠️ Verifying row ${currentIndex + 1}/${total}...`, `CRN mismatch (list ${wantCrn} vs page ${liveCrn}) — waiting for correct detail...`);
+          showProgressToast(`\u26a0\ufe0f Verifying row ${currentIndex + 1}/${total}...`, `CRN mismatch (list ${wantCrn} vs page ${liveCrn}) \u2014 waiting for correct detail...`);
           setTimeout(() => { if (!extractionDone) runDetailPolling(finishItemExtraction, wantCrn); }, 500);
           return;
         }
@@ -1254,9 +1254,9 @@
       const info = JSON.parse(successRaw);
       setTimeout(() => {
         if (info.isBulk) {
-          showToast(`✅ Copied ${info.bulkCount} row(s) to Excel!`, `All driver & user details included. Press Ctrl+V in Excel.`);
+          showToast(`\u2705 Copied ${info.bulkCount} row(s) to Excel!`, `All driver & user details included. Press Ctrl+V in Excel.`);
         } else {
-          showToast(`✅ Copied CRN ${info.crn || ""}!`, `User: ${info.user} | Driver: ${info.driver}`);
+          showToast(`\u2705 Copied CRN ${info.crn || ""}!`, `User: ${info.user} | Driver: ${info.driver}`);
         }
       }, 300);
     }
@@ -1284,13 +1284,13 @@
     bar.className = "allo-detail-bar";
     bar.innerHTML = `
       <div style="display:flex;align-items:center;gap:8px;">
-        <span style="font-weight:700;color:#38bdf8;">📋 Booking Detail Page</span>
+        <span style="font-weight:700;color:#38bdf8;">\ud83d\udccb Booking Detail Page</span>
       </div>
       <button class="allo-btn success" id="allo-copy-this-detail-btn">
         Copy This Row to Excel
       </button>
       <button class="allo-btn secondary" id="allo-back-btn">
-        ← Back to List
+        \u2190 Back to List
       </button>
     `;
     document.body.appendChild(bar);
@@ -1316,7 +1316,7 @@
       });
 
       copyToClipboard(rowTsv);
-      showToast(`✅ Copied! User: ${user}`, `Driver: ${driver} | Paste in Excel`);
+      showToast(`\u2705 Copied! User: ${user}`, `Driver: ${driver} | Paste in Excel`);
     });
 
     document.getElementById("allo-back-btn").addEventListener("click", () => {
@@ -1349,10 +1349,10 @@
         const txt = (el.innerText || "").trim();
         if (txt === "From" || txt.startsWith("From:")) {
           el.style.color = "#10b981"; el.style.fontWeight = "bold";
-          if (!el.innerText.includes("🟢")) el.innerText = "🟢 " + el.innerText;
+          if (!el.innerText.includes("\ud83d\udfe2")) el.innerText = "\ud83d\udfe2 " + el.innerText;
         } else if (txt === "To" || txt.startsWith("To:")) {
           el.style.color = "#ef4444"; el.style.fontWeight = "bold";
-          if (!el.innerText.includes("🔴")) el.innerText = "🔴 " + el.innerText;
+          if (!el.innerText.includes("\ud83d\udd34")) el.innerText = "\ud83d\udd34 " + el.innerText;
         }
       });
     };
@@ -1393,7 +1393,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
           Excel Copy
         </span>
-        <button style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;" id="allo-close-panel" title="Turn OFF">✕</button>
+        <button style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:16px;padding:0 4px;line-height:1;" id="allo-close-panel" title="Turn OFF">\u2715</button>
       </div>
       <button class="allo-btn" id="allo-snip-btn" title="Shortcut: Alt+S">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
@@ -1442,7 +1442,7 @@
       btn.className = "allo-row-copy-btn";
       btn.type = "button";
       btn.title = "Click to open details, extract User & Driver name, and copy to Excel";
-      btn.innerHTML = `<span>📋 Copy</span>`;
+      btn.innerHTML = `<span>\ud83d\udccb Copy</span>`;
 
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -1471,14 +1471,14 @@
     const copyBtn = rowEl.querySelector(".allo-row-copy-btn");
 
     if (copyBtn) {
-      copyBtn.innerHTML = `<span>⏳ Navigating...</span>`;
+      copyBtn.innerHTML = `<span>\u23f3 Navigating...</span>`;
       copyBtn.style.opacity = "0.7";
     }
 
     // Highlight row
     rowEl.classList.add("allo-row-selected");
 
-    // Store pending copy data in sessionStorage — the detail page will pick this up
+    // Store pending copy data in sessionStorage \u2014 the detail page will pick this up
     const pendingData = {
       listPage: getActivePageNumber(),
       date: basic.date || todayStr(),
@@ -1495,7 +1495,7 @@
     sessionStorage.setItem("ALLO_PENDING_COPY", JSON.stringify(pendingData));
 
     console.log("[Allo Exporter] Clicking row to trigger Angular navigation...");
-    showProgressToast("⚡ Opening detail page...", "Will auto-copy & return!");
+    showProgressToast("\u26a1 Opening detail page...", "Will auto-copy & return!");
 
     // Angular handles navigation via click on <td> cells, not via <a> links.
     // Find a clickable td (not the action/last td where our button lives)
@@ -1513,7 +1513,7 @@
   function cleanVehicle(val) {
     if (!val || typeof val !== "string") return "-";
     const s = val.trim();
-    if (!s || /^[-–—:.\s]+$/i.test(s) || /^(n\/?a|none|null|undefined|no details)$/i.test(s)) {
+    if (!s || /^[-\u2013\u2014:.\s]+$/i.test(s) || /^(n\/?a|none|null|undefined|no details)$/i.test(s)) {
       return "-";
     }
     // If vehicle matches field label or CRN pattern, return "-"
@@ -1531,7 +1531,7 @@
     const s = val.trim();
     if (!s) return "No Details";
     // Check if it's only placeholder punctuation, colons, dashes or empty words
-    if (/^[-–—:.\s]+$/i.test(s) || /^(n\/?a|none|null|undefined|no details)$/i.test(s)) {
+    if (/^[-\u2013\u2014:.\s]+$/i.test(s) || /^(n\/?a|none|null|undefined|no details)$/i.test(s)) {
       return "No Details";
     }
     return s;
@@ -1679,7 +1679,7 @@
               if (/^(first|last|email|mobile|phone|provider|driver|user|customer|passenger|details|name|vehicle|service)/i.test(l)) return false;
               if (/[@.:]/.test(l) && /@/.test(l)) return false; // emails
               if (/^[\d\s+()-]+$/.test(l)) return false; // phone numbers
-              if (/^[-–—:.\s]+$/.test(l)) return false; // separators
+              if (/^[-\u2013\u2014:.\s]+$/.test(l)) return false; // separators
               return true;
             });
             if (nameLines.length > 0) {
@@ -1705,7 +1705,7 @@
       selectedRows = Array.from(foundRows);
     }
     if (selectedRows.length === 0) {
-      showToast("⚠️ No rows selected", "Check at least one row first.");
+      showToast("\u26a0\ufe0f No rows selected", "Check at least one row first.");
       return;
     }
 
@@ -1937,7 +1937,7 @@
               if (/^(first|last|email|mobile|phone|provider|driver|user|customer|passenger|details|name|vehicle|service)/i.test(l)) return false;
               if (/[@.:]/.test(l) && /@/.test(l)) return false;
               if (/^[\d\s+()-]+$/.test(l)) return false;
-              if (/^[-–—:.\s]+$/.test(l)) return false;
+              if (/^[-\u2013\u2014:.\s]+$/.test(l)) return false;
               return true;
             });
             if (nameLines.length > 0) return nameLines[0];
@@ -1965,13 +1965,13 @@
   }
 
   function extractFieldValue(sectionText, fieldName) {
-    const colonRegex = new RegExp(fieldName + "\\s*[:：.]\\s*(.+)", "i");
+    const colonRegex = new RegExp(fieldName + "\\s*[:\uff1a.]\\s*(.+)", "i");
     const colonMatch = sectionText.match(colonRegex);
     if (colonMatch) {
       let val = colonMatch[1].trim().split("\n")[0].trim();
       val = val.split(/\b(?:Last Name|Email|Mobile|Phone|Telephone|First Name)\b/i)[0].trim();
-      val = val.replace(/^[:：.]\s*/, "").trim();
-      if (val && !/^[:：.\-\s]+$/.test(val) && val.length > 0) return val;
+      val = val.replace(/^[:\uff1a.]\s*/, "").trim();
+      if (val && !/^[:\uff1a.\-\s]+$/.test(val) && val.length > 0) return val;
     }
 
     const lines = sectionText.split("\n").map(l => l.trim());
@@ -1979,7 +1979,7 @@
       if (lines[i].toLowerCase().includes(fieldName.toLowerCase())) {
         for (let j = i + 1; j < lines.length; j++) {
           const nextLine = lines[j].trim();
-          if (nextLine && !/^[:：.\-\s]+$/.test(nextLine)) {
+          if (nextLine && !/^[:\uff1a.\-\s]+$/.test(nextLine)) {
             if (!/^(First Name|Last Name|Email|Mobile|Phone|Telephone|Service|CRN|Date|From|To|Vehicle)/i.test(nextLine)) {
               return nextLine;
             }
@@ -2082,7 +2082,7 @@
       return !(r.right < rect.left || r.left > rect.right || r.bottom < rect.top || r.top > rect.bottom);
     });
     if (selectedRows.length === 0) {
-      showToast("⚠️ No rows detected", "Drag over the booking rows.");
+      showToast("\u26a0\ufe0f No rows detected", "Drag over the booking rows.");
       return;
     }
     extractAndCopyRows(selectedRows);
@@ -2138,7 +2138,7 @@
       clone.querySelectorAll(".allo-row-copy-btn, .allo-row-checkbox-wrap, input[type='checkbox'], button").forEach(n => n.remove());
       return Array.from(clone.querySelectorAll("td, [role='cell']")).map(c => (c.innerText || c.textContent || "").trim());
     } catch (e) {
-      return Array.from(rowEl.querySelectorAll("td, [role='cell']")).map(c => (c.innerText || "").trim().replace(/📋\s*Copy/gi, "").trim());
+      return Array.from(rowEl.querySelectorAll("td, [role='cell']")).map(c => (c.innerText || "").trim().replace(/\ud83d\udccb\s*Copy/gi, "").trim());
     }
   }
 
@@ -2146,18 +2146,18 @@
 
   // ============================================================
   //  PARSE ROW (basic info from list page)
-  //  NOTE: bulk must parse the SAME row it will enrich — never guess by index.
+  //  NOTE: bulk must parse the SAME row it will enrich \u2014 never guess by index.
   // ============================================================
   function parseBookingRow(rowEl, headerMap) {
     const cleanCells = getCleanCells(rowEl);
-    const rawText = cleanCells.join("\n").trim() || ((rowEl.innerText || "").replace(/📋\s*Copy/gi, "").trim());
+    const rawText = cleanCells.join("\n").trim() || ((rowEl.innerText || "").replace(/\ud83d\udccb\s*Copy/gi, "").trim());
     const cells = cleanCells;
 
     let dateVal = "", timeVal = "", crnVal = "";
     let fromVal = "", toVal = "";
     let statusVal = "";
 
-    // CRN — prefer the CRN column cell, fall back to 179-pattern in row text
+    // CRN \u2014 prefer the CRN column cell, fall back to 179-pattern in row text
     if (headerMap && headerMap.crn >= 0 && cells[headerMap.crn]) {
       const d = digitsOnly(cells[headerMap.crn]);
       const m = (cells[headerMap.crn].match(/179\d{8,12}/) || d.match(/179\d{8,12}/) || d.match(/\d{10,15}/));
@@ -2168,24 +2168,24 @@
       if (crnMatch) crnVal = digitsOnly(crnMatch[1] || crnMatch[0]);
     }
 
-    // Date — prefer the Date column cell so LKR amounts / other numbers never leak in
+    // Date \u2014 prefer the Date column cell so LKR amounts / other numbers never leak in
     const dateCellText = (headerMap && headerMap.date >= 0 && cells[headerMap.date]) ? cells[headerMap.date] : rawText;
     const dateMatch = dateCellText.match(/(\d{2}[\/\-]\d{2}[\/\-]\d{4}|\d{4}[\/\-]\d{2}[\/\-]\d{2})/);
     dateVal = dateMatch ? normalizeDate(dateMatch[1]) : todayStr();
 
-    // Time — prefer the Date column cell (date+time live together), fall back to row text
+    // Time \u2014 prefer the Date column cell (date+time live together), fall back to row text
     const timeMatch = dateCellText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm))/i) ||
                       dateCellText.match(/(\d{1,2}:\d{2})/) ||
                       rawText.match(/(\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm))/i);
     if (timeMatch) timeVal = timeMatch[1].trim();
 
-    // Status — prefer the Status column cell, fall back to row text
+    // Status \u2014 prefer the Status column cell, fall back to row text
     const statusCellText = (headerMap && headerMap.status >= 0 && cells[headerMap.status]) ? cells[headerMap.status] : rawText;
     if (/completed/i.test(statusCellText)) statusVal = "completed";
     else if (/cancelled|canceled/i.test(statusCellText)) statusVal = "cancelled";
     else if (/pending/i.test(statusCellText)) statusVal = "pending";
 
-    // Addresses — prefer header-mapped FROM/TO columns (exact), then CRN-relative, then fallback
+    // Addresses \u2014 prefer header-mapped FROM/TO columns (exact), then CRN-relative, then fallback
     if (headerMap && headerMap.from >= 0 && cells[headerMap.from]) fromVal = cleanAddr(cells[headerMap.from]);
     if (headerMap && headerMap.to >= 0 && cells[headerMap.to]) toVal = cleanAddr(cells[headerMap.to]);
     if ((!fromVal || !toVal) && cells.length >= 5) {
@@ -2256,7 +2256,7 @@
     });
 
     if (parsedData.length === 0) {
-      showToast("⚠️ No rows found", "Check your selection.");
+      showToast("\u26a0\ufe0f No rows found", "Check your selection.");
       return;
     }
 
@@ -2264,7 +2264,7 @@
     const withUrl = parsedData.filter(r => r.detailUrl).length;
 
     if (withUrl > 0) {
-      showProgressToast(`⏳ Fetching user & driver details... 0/${withUrl}`, "Please wait...");
+      showProgressToast(`\u23f3 Fetching user & driver details... 0/${withUrl}`, "Please wait...");
 
       let fetched = 0;
       for (let i = 0; i < parsedData.length; i++) {
@@ -2274,11 +2274,11 @@
         try {
           const details = await fetchBookingDetails(parsedData[i].detailUrl);
           // VERIFY every bulk list: fetched detail CRN must match the list row CRN.
-          // If mismatch, do NOT apply — leave as No Details so queue navigation re-verifies.
+          // If mismatch, do NOT apply \u2014 leave as No Details so queue navigation re-verifies.
           const wantCrn = digitsOnly(parsedData[i].crn || "");
           const gotCrn = digitsOnly((details && details.crn) || "");
           if (wantCrn && gotCrn && wantCrn !== gotCrn) {
-            console.warn(`[Allo Exporter] Bulk CRN mismatch: row ${wantCrn} vs fetched ${gotCrn} — will re-verify via navigation.`);
+            console.warn(`[Allo Exporter] Bulk CRN mismatch: row ${wantCrn} vs fetched ${gotCrn} \u2014 will re-verify via navigation.`);
           } else if (details && (details.userName !== "No Details" || details.driverName !== "No Details")) {
             parsedData[i].user = cleanName(details.userName);
             parsedData[i].driver = cleanName(details.driverName);
@@ -2291,7 +2291,7 @@
         }
 
         fetched++;
-        showProgressToast(`⏳ Fetching details... ${fetched}/${withUrl}`, `Getting user & driver names...`);
+        showProgressToast(`\u23f3 Fetching details... ${fetched}/${withUrl}`, `Getting user & driver names...`);
 
         if (i < parsedData.length - 1) {
           await new Promise(r => setTimeout(r, 200));
@@ -2305,7 +2305,7 @@
     if (missingDetailsCount > 0) {
       // Start bulk queue auto-navigation sequence!
       console.log(`[Allo Exporter] ${missingDetailsCount} items missing details. Starting bulk auto-navigation...`);
-      showProgressToast(`⚡ Starting multi-row copy...`, `Extracting details for ${parsedData.length} rows...`);
+      showProgressToast(`\u26a1 Starting multi-row copy...`, `Extracting details for ${parsedData.length} rows...`);
 
       const queueState = {
         currentIndex: 0,
@@ -2346,7 +2346,7 @@
     const ok = copyToClipboard(clipboardText);
 
     if (ok) {
-      showToast(`✅ Copied ${parsedData.length} row(s) as a single table!`, `Press Ctrl+V in Excel now.`);
+      showToast(`\u2705 Copied ${parsedData.length} row(s) as a single table!`, `Press Ctrl+V in Excel now.`);
     } else {
       showModalFallback(clipboardText, parsedData.length);
     }
@@ -2379,10 +2379,10 @@
   function buildRowTsv(data) {
     const fieldOrder = ["date", "time", "crn", "from", "to", "driver", "user", "vehicle", "status", "note", "userMobile", "driverMobile"];
     return fieldOrder
-      .filter(key => enabledFields[key] !== false)
       .map(key => {
+        if (enabledFields[key] === false) return "";
         let val = sanitize(data[key] || "");
-        // Apply space handling only to copied output, never to original content
+        // Apply extra space removal only if enabled
         if (copySettings.removeExtraSpaces && val) {
           val = val.replace(/\s+/g, " ").trim();
         }
@@ -2401,7 +2401,7 @@
       ok = document.execCommand("copy"); document.body.removeChild(ta);
     } catch(e) {}
     if (!ok && navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(() => showToast("✅ Copied!","Ctrl+V in Excel")).catch(() => showModalFallback(text));
+      navigator.clipboard.writeText(text).then(() => showToast("\u2705 Copied!","Ctrl+V in Excel")).catch(() => showModalFallback(text));
       return true;
     }
     return ok;
@@ -2412,7 +2412,7 @@
     if (!m) { m = document.createElement("div"); m.id = "allo-copy-modal"; document.body.appendChild(m); }
     m.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:2147483647;font-family:-apple-system,sans-serif;";
     m.innerHTML = `<div style="background:#0f172a;color:#fff;padding:22px;border-radius:12px;max-width:520px;width:92%;box-shadow:0 20px 35px rgba(0,0,0,.5);border:1px solid #334155;">
-      <h3 style="margin:0 0 8px;color:#38bdf8;">📋 ${count} Rows Ready</h3>
+      <h3 style="margin:0 0 8px;color:#38bdf8;">\ud83d\udccb ${count} Rows Ready</h3>
       <p style="font-size:13px;color:#94a3b8;margin:0 0 12px;">Click <b>Copy Now</b>, then <b>Ctrl+V</b> in Excel:</p>
       <textarea id="allo-mt" style="width:100%;height:110px;background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:6px;padding:10px;font-family:monospace;font-size:12px;box-sizing:border-box;margin-bottom:14px;" readonly>${text}</textarea>
       <div style="display:flex;justify-content:flex-end;gap:10px;">
@@ -2420,14 +2420,14 @@
         <button id="allo-mb" style="background:#2563eb;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;">Copy Now</button>
       </div></div>`;
     document.getElementById("allo-mt").select();
-    document.getElementById("allo-mb").onclick = () => { document.getElementById("allo-mt").select(); document.execCommand("copy"); showToast("✅ Copied!","Ctrl+V in Excel."); m.style.display="none"; };
+    document.getElementById("allo-mb").onclick = () => { document.getElementById("allo-mt").select(); document.execCommand("copy"); showToast("\u2705 Copied!","Ctrl+V in Excel."); m.style.display="none"; };
     document.getElementById("allo-mc").onclick = () => { m.style.display="none"; };
   }
 
   // Copy all visible rows
   function copyAllVisibleBookings() {
     const rows = getAllPossibleRows();
-    if (rows.length === 0) { showToast("⚠️ No rows found", "Open the Bookings page."); return; }
+    if (rows.length === 0) { showToast("\u26a0\ufe0f No rows found", "Open the Bookings page."); return; }
     extractAndCopyRows(rows);
   }
 
@@ -2484,7 +2484,7 @@
     const btn = document.getElementById("allo-copy-selected-btn");
     if (btn) btn.style.display = checkboxesActive ? "inline-flex" : "none";
     updateBadgeCount();
-    if (checkboxesActive) showToast("☑️ Checkboxes Active", "Check rows → Copy Selected.");
+    if (checkboxesActive) showToast("\u2611\ufe0f Checkboxes Active", "Check rows \u2192 Copy Selected.");
   }
 
   function updateBadgeCount() {
@@ -2590,7 +2590,7 @@
       const s = document.getElementById("allo-stop-bulk-btn");
       if (s) s.remove();
     } catch (e) {}
-    if (showMsg !== false) showToast("⛔ Bulk copy stopped", "Partial rows were NOT copied. Start again when ready.");
+    if (showMsg !== false) showToast("\u26d4 Bulk copy stopped", "Partial rows were NOT copied. Start again when ready.");
   }
 
   function showProgressToast(title, sub) {
@@ -2616,7 +2616,7 @@
       if (document.getElementById("allo-stop-bulk-btn")) return;
       const b = document.createElement("button");
       b.id = "allo-stop-bulk-btn";
-      b.textContent = "⛔ Stop Copy";
+      b.textContent = "\u26d4 Stop Copy";
       b.title = "Stop the ongoing bulk copy";
       b.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#dc2626;color:#fff;border:none;border-radius:9999px;padding:10px 22px;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 10px 25px rgba(0,0,0,.4);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
       b.addEventListener("click", (e) => {
