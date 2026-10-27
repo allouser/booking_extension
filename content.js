@@ -756,33 +756,35 @@
   // ============================================================
   function getActivePageNumber() {
     try {
-      // 1. active pagination button
+      // 1. active pagination button / container / link
       const activeBtn = document.querySelector(
-        ".pagination .active, .pagination li.active, .page-item.active .page-link, " +
-        ".ngx-pagination .current, ul.pagination li.current, [class*='pagination'] .active"
+        ".pagination .active, .pagination li.active, .page-item.active .page-link, .page-item.active, " +
+        ".ngx-pagination .current, ul.pagination li.current, [class*='pagination'] .active, [class*='pagination'] .current, " +
+        "[class*='pagination'] [aria-current='page'], [aria-current='page']"
       );
       if (activeBtn) {
         const n = parseInt((activeBtn.innerText || activeBtn.textContent || "").trim(), 10);
         if (!isNaN(n) && n > 0) return n;
       }
-      // 2. URL query (?page=2 / pageNumber=2 / pageNo=2)
-      const m = window.location.href.match(/[?&](page(?:No|Num(?:ber)?)?)=(\d+)/i);
-      if (m && parseInt(m[2], 10) > 0) return parseInt(m[2], 10);
-      // 3. Any numbered button that looks selected
+      // 2. Any pagination item with blue/highlighted background or aria-current
       const candidates = Array.from(document.querySelectorAll(
-        ".pagination button, .pagination a, .page-item a, .page-item button, ul.pagination li a, ul.pagination li button"
+        ".pagination * , [class*='pagination'] * , ul[class*='page'] *"
       ));
       for (const el of candidates) {
         const t = (el.innerText || el.textContent || "").trim();
-        if (/^\d+$/.test(t) && (
-          el.classList.contains("active") || el.classList.contains("current") ||
-          el.getAttribute("aria-current") === "page" ||
-          (el.parentElement && (el.parentElement.classList.contains("active") || el.parentElement.classList.contains("current")))
-        )) {
-          const n = parseInt(t, 10);
-          if (!isNaN(n) && n > 0) return n;
+        if (/^\d+$/.test(t)) {
+          const isAct = el.classList.contains("active") || el.classList.contains("current") ||
+            el.getAttribute("aria-current") === "page" ||
+            (el.parentElement && (el.parentElement.classList.contains("active") || el.parentElement.classList.contains("current")));
+          if (isAct) {
+            const n = parseInt(t, 10);
+            if (!isNaN(n) && n > 0) return n;
+          }
         }
       }
+      // 3. URL query (?page=2 / pageNumber=2 / pageNo=2)
+      const m = window.location.href.match(/[?&](page(?:No|Num(?:ber)?)?)=(\d+)/i);
+      if (m && parseInt(m[2], 10) > 0) return parseInt(m[2], 10);
     } catch (e) {}
     return 1;
   }
@@ -800,18 +802,40 @@
 
   function findPageButton(pageNum) {
     try {
+      const pageStr = String(pageNum);
+      // Scan all potential pagination containers or any link/button containing numbers
       const els = Array.from(document.querySelectorAll(
-        "ul.pagination li a, ul.pagination li button, .pagination a, .pagination button, " +
-        ".page-item a, .page-item button, [class*='pagination'] a, [class*='pagination'] button"
+        "ul.pagination li a, ul.pagination li button, ul.pagination li span, " +
+        ".pagination a, .pagination button, .pagination span, .pagination li, " +
+        ".page-item a, .page-item button, .page-item span, " +
+        "[class*='pagination'] a, [class*='pagination'] button, [class*='pagination'] li, [class*='pagination'] span"
       ));
-      // exact-number match first (skip \u00ab \u00bb ... 173)
+
+      // 1. Exact-number match on clickable or anchor elements
       for (const el of els) {
-        if ((el.innerText || el.textContent || "").trim() === String(pageNum)) return el;
+        const txt = (el.innerText || el.textContent || "").trim();
+        if (txt === pageStr) {
+          // If el is an <li>, look for clickable child first
+          const clickable = el.querySelector("a, button, span") || el;
+          return clickable;
+        }
       }
-      // aria-label fallback ("Go to page 2")
+
+      // 2. Look for elements whose direct text is the number (avoiding parent container text)
       for (const el of els) {
-        const aria = (el.getAttribute("aria-label") || "").toLowerCase();
-        if (aria.includes("page " + pageNum) || aria === String(pageNum)) return el;
+        const directText = Array.from(el.childNodes)
+          .filter(n => n.nodeType === 3)
+          .map(n => n.textContent.trim())
+          .join("");
+        if (directText === pageStr) return el;
+      }
+
+      // 3. aria-label fallback ("Go to page 2", "Page 2", "2")
+      for (const el of els) {
+        const aria = (el.getAttribute("aria-label") || el.getAttribute("title") || "").toLowerCase().trim();
+        if (aria === pageStr || aria === `page ${pageStr}` || aria === `go to page ${pageStr}`) {
+          return el;
+        }
       }
     } catch (e) {}
     return null;
@@ -833,7 +857,11 @@
       if (getActivePageNumber() === target) { clearInterval(timer); finish(true); return; }
       const btn = findPageButton(target);
       if (btn) {
-        try { btn.click(); clicked = true; } catch (e) {}
+        try {
+          btn.scrollIntoView?.({ block: "nearest" });
+          btn.click();
+          clicked = true;
+        } catch (e) {}
         // After clicking, keep verifying for a while — Angular may take time
         if (clicked && tries > 50) { clearInterval(timer); finish(true); return; }
         return;
