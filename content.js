@@ -827,23 +827,25 @@
     // If we already landed on the right page, done.
     if (getActivePageNumber() === target) { finish(true); return true; }
     let tries = 0;
+    let clicked = false;
     const timer = setInterval(() => {
       tries++;
       if (getActivePageNumber() === target) { clearInterval(timer); finish(true); return; }
       const btn = findPageButton(target);
       if (btn) {
-        try { btn.click(); } catch (e) {}
-        // give Angular a moment, then verify; keep polling a bit
-        if (tries > 25) { clearInterval(timer); finish(true); return; }
+        try { btn.click(); clicked = true; } catch (e) {}
+        // After clicking, keep verifying for a while — Angular may take time
+        if (clicked && tries > 50) { clearInterval(timer); finish(true); return; }
         return;
       }
-      if (tries >= 40) { // ~6s: fallback to URL param if site supports it
+      if (tries >= 80) { // ~12s: fallback to URL param if site supports it
         clearInterval(timer);
         const url = buildPageUrl(target);
         if (url && url !== window.location.href) {
           try { window.location.href = url; } catch (e) {}
           finish(true);
         } else {
+          // Even if URL fallback unavailable, call done so bulk queue can proceed
           finish(false);
         }
       }
@@ -945,18 +947,37 @@
 
     // Wait for list DOM to settle (and saved pagination to restore) then click target row
     let attempts = 0;
+    let pageRestoreTriggered = false;
     const savedPage = queueState.listPage || 1;
     const clickTimer = setInterval(() => {
       if (isBulkCancelRequested()) { clearInterval(clickTimer); handleBulkStopped(true); return; }
       attempts++;
-      // If we landed on page 1 but should be on page N, trigger restore once and wait
+      // If we landed on page 1 but should be on page N, trigger restore and wait patiently
       if (savedPage > 1 && getActivePageNumber() !== savedPage) {
-        if (attempts === 5) restoreListPage(savedPage, null);
-        if (attempts >= 60) { // ~6s: skip if page never restores
+        // Retry page restore multiple times — Angular may take time to render pagination
+        if (attempts === 5 || attempts === 40 || attempts === 80 || attempts === 120) {
+          if (!pageRestoreTriggered || attempts > 5) {
+            pageRestoreTriggered = true;
+            restoreListPage(savedPage, null);
+          }
+        }
+        // Also try direct button clicks on every 10th attempt as a fallback
+        if (attempts % 10 === 0) {
+          const btn = findPageButton(savedPage);
+          if (btn) { try { btn.click(); } catch (e) {} }
+        }
+        if (attempts >= 200) { // ~20s: very patient wait for Angular pagination
           clearInterval(clickTimer);
-          queueState.currentIndex = currentIndex + 1;
-          sessionStorage.setItem("ALLO_BULK_QUEUE", JSON.stringify(queueState));
-          resumeBulkQueueNextRow(queueState);
+          // Last resort: try URL-based navigation
+          const url = buildPageUrl(savedPage);
+          if (url && url !== window.location.href) {
+            try { window.location.href = url; } catch (e) {}
+          } else {
+            // Skip this item only as absolute last resort
+            queueState.currentIndex = currentIndex + 1;
+            sessionStorage.setItem("ALLO_BULK_QUEUE", JSON.stringify(queueState));
+            resumeBulkQueueNextRow(queueState);
+          }
         }
         return;
       }
@@ -980,7 +1001,7 @@
           const allTds = Array.from(targetRow.querySelectorAll("td"));
           const clickTarget = allTds.length > 1 ? allTds[1] : allTds[0] || targetRow;
           try {
-            // Re-check cancel right before the click \u2014 rapid Stop presses land here
+            // Re-check cancel right before the click — rapid Stop presses land here
             if (isBulkCancelRequested()) { handleBulkStopped(true); return; }
             clickTarget.click();
           } catch (e) {}
@@ -988,7 +1009,7 @@
         }
       }
 
-      if (attempts >= 40) { // ~4 seconds
+      if (attempts >= 80) { // ~8 seconds: generous wait for DOM rows to appear
         clearInterval(clickTimer);
         // Skip this item if row not found in DOM
         queueState.currentIndex = currentIndex + 1;
@@ -1144,11 +1165,14 @@
       if (s) s.remove();
     } catch (e) {}
 
-    if (queueState.returnUrl) {
-      navigateBackToList(queueState.returnUrl, queueState.listPage || 1, "/bookings");
-    } else {
-      navigateBackToList(null, queueState.listPage || 1, "/bookings");
-    }
+    // Delay navigation so clipboard has time to settle before page unloads
+    setTimeout(() => {
+      if (queueState.returnUrl) {
+        navigateBackToList(queueState.returnUrl, queueState.listPage || 1, "/bookings");
+      } else {
+        navigateBackToList(null, queueState.listPage || 1, "/bookings");
+      }
+    }, 150);
   }
 
   function runDetailPolling(onSuccess, expectedCrn) {
