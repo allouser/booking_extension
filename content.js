@@ -852,6 +852,7 @@
     if (getActivePageNumber() === target) { finish(true); return true; }
     let tries = 0;
     let clicked = false;
+    let stepNavAttempts = 0;
     const timer = setInterval(() => {
       tries++;
       if (getActivePageNumber() === target) { clearInterval(timer); finish(true); return; }
@@ -859,6 +860,7 @@
       if (btn) {
         try {
           btn.scrollIntoView?.({ block: "nearest" });
+          btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
           btn.click();
           clicked = true;
         } catch (e) {}
@@ -866,7 +868,34 @@
         if (clicked && tries > 50) { clearInterval(timer); finish(true); return; }
         return;
       }
-      if (tries >= 80) { // ~12s: fallback to URL param if site supports it
+      // Target button NOT in DOM — use step-navigation via Next/Last/Previous/First
+      // ngb-pagination only renders nearby pages; we must navigate closer first
+      if (!clicked && tries % 5 === 0) {
+        stepNavAttempts++;
+        const currentPage = getActivePageNumber();
+        try {
+          if (target > currentPage) {
+            // Try clicking "Last" (»») first to jump near the end quickly
+            // Then use "Next" (») for fine-tuning
+            const navBtn = stepNavAttempts <= 2
+              ? findNavButton("Last", "»»")
+              : findNavButton("Next", "»");
+            if (navBtn) {
+              navBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+              navBtn.click();
+            }
+          } else if (target < currentPage) {
+            const navBtn = stepNavAttempts <= 2
+              ? findNavButton("First", "««")
+              : findNavButton("Previous", "«");
+            if (navBtn) {
+              navBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+              navBtn.click();
+            }
+          }
+        } catch (e) {}
+      }
+      if (tries >= 120) { // ~18s: generous timeout
         clearInterval(timer);
         const url = buildPageUrl(target);
         if (url && url !== window.location.href) {
@@ -881,24 +910,70 @@
     return true;
   }
 
+  // Find navigation buttons in ngb-pagination (First/Previous/Next/Last)
+  function findNavButton(ariaLabel, symbolText) {
+    try {
+      // 1. Try aria-label match
+      const byAria = document.querySelector(
+        `ul.pagination a[aria-label="${ariaLabel}"], ul.pagination button[aria-label="${ariaLabel}"], ` +
+        `[class*='pagination'] a[aria-label="${ariaLabel}"], [class*='pagination'] button[aria-label="${ariaLabel}"]`
+      );
+      if (byAria && !byAria.closest('.disabled') && byAria.closest('li')?.classList.contains('disabled') !== true) {
+        return byAria;
+      }
+      // 2. Try symbol text match (»», «, etc.)
+      if (symbolText) {
+        const allLinks = document.querySelectorAll('ul.pagination a, ul.pagination button, [class*="pagination"] a, [class*="pagination"] button');
+        for (const el of allLinks) {
+          const txt = (el.innerText || el.textContent || "").trim();
+          if (txt === symbolText || txt.includes(symbolText)) {
+            const li = el.closest('li');
+            if (!li || !li.classList.contains('disabled')) return el;
+          }
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function navigateBackToList(returnUrl, savedPage, fallbackPath) {
-    // Never navigate away after user pressed Stop \u2014 navigation is what makes
+    // Never navigate away after user pressed Stop — navigation is what makes
     // "Stop not working when screen quickly changes" happen.
     if (isBulkCancelRequested()) { handleBulkStopped(false); return; }
     const target = Math.max(1, parseInt(savedPage, 10) || 1);
-    const goViaUrl = (url) => {
+
+    // ALWAYS persist the desired page so any load path can restore it
+    if (target > 1) {
+      sessionStorage.setItem("ALLO_RESTORE_PAGE", JSON.stringify({ page: target, ts: Date.now() }));
+    }
+
+    // PRIMARY: Use history.back() — this preserves Angular SPA component state
+    // including the active pagination page (e.g. page 169).
+    // window.location.href would cause a full page reload, resetting to page 1.
+    if (window.history.length > 1) {
       try {
-        if (target > 1) {
-          // Persist desired page so the list-page load can restore it
-          sessionStorage.setItem("ALLO_RESTORE_PAGE", JSON.stringify({ page: target, ts: Date.now() }));
-        }
-        window.location.href = url;
+        const currentUrl = window.location.href;
+        window.history.back();
+        // Safety net: if history.back() didn't navigate away within 1.5s, force via URL
+        setTimeout(() => {
+          if (window.location.href === currentUrl) {
+            // history.back() didn't work — fall back to URL
+            const withPage = buildPageUrl(target);
+            if (withPage) { window.location.href = withPage; }
+            else { window.location.href = returnUrl || fallbackPath || "/bookings"; }
+          }
+        }, 1500);
+        return;
       } catch (e) {}
+    }
+
+    // FALLBACK: direct URL navigation (will lose SPA state)
+    const goViaUrl = (url) => {
+      try { window.location.href = url; } catch (e) {}
     };
-    if (returnUrl) { goViaUrl(returnUrl); return; }
     const withPage = buildPageUrl(target);
     if (withPage) { goViaUrl(withPage); return; }
-    if (window.history.length > 1 && target <= 1) { window.history.back(); return; }
+    if (returnUrl) { goViaUrl(returnUrl); return; }
     goViaUrl(fallbackPath || "/bookings");
   }
 
@@ -971,7 +1046,7 @@
     }
 
     const currentItem = items[currentIndex];
-    showProgressToast(`\u26a1 Processing ${currentIndex + 1}/${items.length}...`, `Opening row CRN: ${currentItem.crn || ""} \u00b7 <b>\u26d4 Press Esc to Stop</b>`);
+    showProgressToast(`⚡ Processing ${currentIndex + 1}/${items.length}...`, `Opening row CRN: ${currentItem.crn || ""} · <b>⛔ Press Esc to Stop</b>`);
 
     // Wait for list DOM to settle (and saved pagination to restore) then click target row
     let attempts = 0;
@@ -980,35 +1055,25 @@
     const clickTimer = setInterval(() => {
       if (isBulkCancelRequested()) { clearInterval(clickTimer); handleBulkStopped(true); return; }
       attempts++;
-      // If we landed on page 1 but should be on page N, trigger restore and wait patiently
+
+      // If we landed on wrong page, trigger restoreListPage ONCE — it handles
+      // step-navigation (Next/Last buttons) internally for hidden page numbers
       if (savedPage > 1 && getActivePageNumber() !== savedPage) {
-        // Retry page restore multiple times — Angular may take time to render pagination
-        if (attempts === 5 || attempts === 40 || attempts === 80 || attempts === 120) {
-          if (!pageRestoreTriggered || attempts > 5) {
-            pageRestoreTriggered = true;
-            restoreListPage(savedPage, null);
-          }
+        if (!pageRestoreTriggered && attempts >= 3) {
+          pageRestoreTriggered = true;
+          restoreListPage(savedPage, null);
         }
-        // Also try direct button clicks on every 10th attempt as a fallback
-        if (attempts % 10 === 0) {
-          const btn = findPageButton(savedPage);
-          if (btn) { try { btn.click(); } catch (e) {} }
-        }
-        if (attempts >= 200) { // ~20s: very patient wait for Angular pagination
+        // Wait up to 25s for pagination to settle
+        if (attempts >= 250) {
           clearInterval(clickTimer);
-          // Last resort: try URL-based navigation
-          const url = buildPageUrl(savedPage);
-          if (url && url !== window.location.href) {
-            try { window.location.href = url; } catch (e) {}
-          } else {
-            // Skip this item only as absolute last resort
-            queueState.currentIndex = currentIndex + 1;
-            sessionStorage.setItem("ALLO_BULK_QUEUE", JSON.stringify(queueState));
-            resumeBulkQueueNextRow(queueState);
-          }
+          // Skip this item as last resort
+          queueState.currentIndex = currentIndex + 1;
+          sessionStorage.setItem("ALLO_BULK_QUEUE", JSON.stringify(queueState));
+          resumeBulkQueueNextRow(queueState);
         }
         return;
       }
+
       const rows = getAllPossibleRows();
       if (rows.length > 0) {
         let targetRow = null;
@@ -1037,7 +1102,7 @@
         }
       }
 
-      if (attempts >= 80) { // ~8 seconds: generous wait for DOM rows to appear
+      if (attempts >= 120) { // ~12 seconds: generous wait for DOM rows to appear
         clearInterval(clickTimer);
         // Skip this item if row not found in DOM
         queueState.currentIndex = currentIndex + 1;
